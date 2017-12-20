@@ -1,6 +1,9 @@
 # VelocyPack
 
-**TODO: Add description**
+Parser and Generator for [VelocyPack](https://github.com/arangodb/velocypack)
+
+The implementation is heavily inspired by [Antidote](https://github.com/michalmuskala/antidote) and
+borrows some code (specifically the Codegen module).
 
 ## Installation
 
