@@ -45,7 +45,8 @@ defmodule VelocyPack.Codegen do
   end
   defp jump_table_to_clauses([{val, {byte, rest, action}} | tail], empty) do
     quote do
-      <<unquote(byte), unquote(rest)::bits>> when unquote(byte) === unquote(val) ->
+      <<unquote(val), unquote(rest)::bits>> ->
+        unquote(byte) = unquote(val)
         unquote(action)
     end ++ jump_table_to_clauses(tail, empty)
   end
@@ -82,7 +83,7 @@ defmodule VelocyPack.Codegen do
     |> Enum.flat_map(fn
       {int, value} when is_integer(int) ->
         [{int, value}]
-      {{:.., _, [s, e]}, value} ->
+      {{:.., _, [s, e]}, value} when is_integer(s) and is_integer(e) ->
         Enum.map(s..e, &{&1, value})
     end)
     |> :orddict.from_list()
