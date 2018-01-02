@@ -2,7 +2,7 @@
 
 Parser and Generator for [VelocyPack](https://github.com/arangodb/velocypack)
 
-The implementation is heavily inspired by [Antidote](https://github.com/michalmuskala/antidote) and
+The implementation is heavily inspired by [Jason](https://github.com/michalmuskala/jason) and
 borrows some code (specifically the Codegen module).
 
 ## Installation

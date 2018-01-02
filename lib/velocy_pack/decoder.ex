@@ -1,7 +1,7 @@
-defmodule VelocyPack.Parser do
+defmodule VelocyPack.Decoder do
   @moduledoc false
 
-  # The implementation of this parser is heavily inspired by that of Antidote (https://github.com/michalmuskala/antidote)
+  # The implementation of this decoder is heavily inspired by that of Jason (https://github.com/michalmuskala/jason)
 
   use Bitwise
   alias VelocyPack.Codegen

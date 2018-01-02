@@ -2,7 +2,7 @@ defmodule VelocyPack.Codegen do
   @moduledoc false
 
   # This is basically a direct copy of the Codegen Module
-  # from https://github.com/michalmuskala/antidote with some
+  # from https://github.com/michalmuskala/jason with some
   # small modifications.
 
   def jump_table(ranges, default) do
