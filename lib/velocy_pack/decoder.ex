@@ -18,14 +18,6 @@ defmodule VelocyPack.Decoder do
     end
   end
 
-  @spec parse(binary(), keyword()) :: any() | no_return()
-  def parse!(data, opts \\ []) do
-    case parse(data, opts) do
-      {:ok, value} -> value
-      {:error, err} -> raise err
-    end
-  end
-
   @spec value(binary()) :: {any(), binary()}
   defp value(data) do
     bytecase data do
