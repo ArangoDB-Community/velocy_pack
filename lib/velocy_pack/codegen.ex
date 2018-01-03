@@ -1,16 +1,25 @@
 defmodule VelocyPack.Codegen do
   @moduledoc false
 
-  # This is basically a direct copy of the Codegen Module
-  # from https://github.com/michalmuskala/jason with some
+  # Most of this code is basically a direct copy of the Codegen
+  # Module from https://github.com/michalmuskala/jason with some
   # small modifications.
 
-  def jump_table(ranges, default) do
-    ranges
-    |> ranges_to_orddict()
-    |> :array.from_orddict(default)
-    |> :array.to_orddict()
+  import Bitwise
+
+  defmacro power_of_2(exp) do
+    result = 1 <<< exp
+    quote do: unquote(result)
   end
+
+  defmacro index_table(offsets, offset, 1), do:
+    quote do: for i <- unquote(offsets), do: <<(i + unquote(offset))::unsigned-size(8)>>
+  defmacro index_table(offsets, offset, 2), do:
+    quote do: for i <- unquote(offsets), do: <<(i + unquote(offset))::unsigned-little-size(16)>>
+  defmacro index_table(offsets, offset, 4), do:
+    quote do: for i <- unquote(offsets), do: <<(i + unquote(offset))::unsigned-little-size(32)>>
+  defmacro index_table(offsets, offset, 8), do:
+    quote do: for i <- unquote(offsets), do: <<(i + unquote(offset))::unsigned-little-size(64)>>
 
   defmacro bytecase(var, do: clauses) do
     {ranges, default, literals} = clauses_to_ranges(clauses, [])
@@ -22,6 +31,13 @@ defmodule VelocyPack.Codegen do
         unquote(jump_table_to_clauses(jump_table, literals))
       end
     end
+  end
+
+  defp jump_table(ranges, default) do
+    ranges
+    |> ranges_to_orddict()
+    |> :array.from_orddict(default)
+    |> :array.to_orddict()
   end
 
   defp clauses_to_ranges([{:->, _, [[{:in, _, [byte, range]}, rest], action]} | tail], acc) do

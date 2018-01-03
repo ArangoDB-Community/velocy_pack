@@ -29,7 +29,7 @@ defmodule VelocyPack.Decoder do
       _ in 0x0a, rest -> {%{}, rest}
       type in 0x0b..0x0e, rest -> parse_object(type, rest)
 
-      # 0x0f..0x12 - unused
+      # TODO: 0x0f..0x12 - objects with unsorted index table
       _ in 0x13, rest -> parse_compact_array(rest)
       _ in 0x14, rest -> parse_compact_object(rest)
 
@@ -50,7 +50,8 @@ defmodule VelocyPack.Decoder do
       type in 0x30..0x39, rest -> parse_small_int(type, rest)
       type in 0x3a..0x3f, rest -> parse_neg_small_int(type, rest)
 
-      type in 0x40..0xbe, rest -> parse_short_string(type, rest)
+      _ in 0x40, rest -> {"", rest}
+      type in 0x41..0xbe, rest -> parse_short_string(type, rest)
       _ in 0xbf, rest -> parse_string(rest)
 
       type in 0xc0..0xc7, rest -> parse_binary(type, rest)
@@ -81,8 +82,8 @@ defmodule VelocyPack.Decoder do
       _ in 0x17..0x1c, _ -> 1
       # 0x1d - external -> not supported
       _ in 0x1e..0x1f, _ -> 1
-      type in 0x20..0x27, _ -> type - 0x1f
-      type in 0x28..0x2f, _ -> type - 0x27
+      type in 0x20..0x27, _ -> type - 0x1f + 1
+      type in 0x28..0x2f, _ -> type - 0x27 + 1
       _ in 0x30..0x3f, _ -> 1
       type in 0x40..0xbe, _ -> type - 0x40
       _ in 0xbf, rest -> get_string_size(rest)
