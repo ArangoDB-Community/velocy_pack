@@ -152,8 +152,7 @@ defmodule VelocyPack.Decoder do
   end
 
   @spec parse_string( binary()) :: {any(), binary()}
-  defp parse_string(data) do
-    <<length::integer-unsigned-little-size(64), value::binary-size(length), rest::binary>> = data
+  defp parse_string(<<length::integer-unsigned-little-size(64), value::binary-size(length), rest::binary>>) do
     {value, rest}
   end
 
@@ -224,8 +223,7 @@ defmodule VelocyPack.Decoder do
   end
 
   @spec parse_array_with_index_table(integer(), binary()) :: {list(), binary()}
-  defp parse_array_with_index_table(0x09, data) do
-    <<total_size::integer-unsigned-little-size(64), rest::binary>> = data
+  defp parse_array_with_index_table(0x09, <<total_size::integer-unsigned-little-size(64), rest::binary>>) do
     data_size = total_size - 1 - 8 - 8;
     <<data::binary-size(data_size), length::integer-unsigned-little-size(64), rest::binary>> = rest
     { parse_array_with_index_table_elements(length, 8, data), rest}
@@ -249,26 +247,22 @@ defmodule VelocyPack.Decoder do
     list
   end
 
-  @spec parse_variable_size_array_elements(integer(), binary()) :: {list(), binary()}
-  defp parse_variable_size_array_elements(length, data),
-    do: parse_array_elements(length, data)
-
-  # Yes, we totaly do this in a non-tail-recursive way.
-  # Performance tests large arrays (~10000 entries) showed
-  # that this is ~10% faster than a tail-recursive version.
-  @spec parse_array_elements(integer(), binary()) :: {list(), binary()}
-  defp parse_array_elements(0, data), do: {[], data}
-  defp parse_array_elements(length, data) do
-    {elem, rest} = value(data)
-    {list, rest} = parse_array_elements(length - 1, rest)
-    {[elem | list], rest}
-  end
-
   @spec parse_compact_array(binary()) :: {list(), binary()}
   defp parse_compact_array(data) do
     {data, length, rest} = parse_compact_header(data)
     {list, <<>>} = parse_variable_size_array_elements(length, data)
     {list, rest}
+  end
+
+  # Yes, we totaly do this in a non-tail-recursive way.
+  # Performance tests for large arrays (~10000 entries) showed
+  # that this is ~10% faster than a tail-recursive version.
+  @spec parse_variable_size_array_elements(integer(), binary()) :: {list(), binary()}
+  defp parse_variable_size_array_elements(0, data), do: {[], data}
+  defp parse_variable_size_array_elements(length, data) do
+    {elem, rest} = value(data)
+    {list, rest} = parse_variable_size_array_elements(length - 1, rest)
+    {[elem | list], rest}
   end
 
   @spec parse_object(integer(), binary()) :: {map(), binary()}
