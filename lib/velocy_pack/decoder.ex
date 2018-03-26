@@ -79,7 +79,8 @@ defmodule VelocyPack.Decoder do
       type in 0x0b..0x0e, rest -> get_object_size(type, rest)
       _ in 0x13..0x14, rest -> get_compact_size(rest)
       # 0x15..0x16 - reserved
-      _ in 0x17..0x1c, _ -> 1
+      _ in 0x17..0x1a, _ -> 1
+      _ in 0x1b..0x1c, _ -> 9
       # 0x1d - external -> not supported
       _ in 0x1e..0x1f, _ -> 1
       type in 0x20..0x27, _ -> type - 0x1f + 1
@@ -109,7 +110,7 @@ defmodule VelocyPack.Decoder do
   @compile {:inline, parse_date_time: 1}
   @spec parse_date_time(binary()) :: {any(), binary()}
   defp parse_date_time(<<value::integer-unsigned-little-size(64), rest::binary>>),
-    do: {DateTime.from_unix(value, :milliseconds), rest}
+    do: {DateTime.from_unix!(value, :milliseconds), rest}
 
   @compile {:inline, parse_int: 2}
   @spec parse_int(integer(), binary()) :: {any(), binary()}
