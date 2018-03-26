@@ -206,14 +206,13 @@ defmodule VelocyPack.Decoder do
   defp parse_array_without_index_table(type, data) do
     size_bytes = 1 <<< (type - 0x02)
     <<total_size::integer-unsigned-little-unit(8)-size(size_bytes), rest::binary>> = data
+    data_size = byte_size(rest)
+    rest = skip_zeros(rest)
+    zeros = data_size - byte_size(rest)
     elem_size = value_size(rest)
-    length = div((total_size - size_bytes - 1), elem_size)
-    parse_fixed_size_array_elements(length, elem_size, skip_zeros(rest))
+    length = div((total_size - size_bytes - 1)- zeros, elem_size)
+    parse_fixed_size_array_elements(length, elem_size, rest)
   end
-
-  @spec skip_zeros(binary()) :: binary()
-  defp skip_zeros(<<0, rest::binary>>), do: skip_zeros(rest)
-  defp skip_zeros(data), do: data
 
   @spec parse_fixed_size_array_elements(integer(), integer(), binary()) :: {list(), binary()}
   defp parse_fixed_size_array_elements(0, _, data), do: {[], data}
@@ -238,6 +237,7 @@ defmodule VelocyPack.Decoder do
       rest::binary>> = data
     data_size = total_size - 1 - 2 * size_bytes
     <<data::binary-size(data_size), rest::binary>> = rest
+    data = skip_zeros(data)
     list = parse_array_with_index_table_elements(length, size_bytes, data)
     { list, rest }
   end
@@ -308,6 +308,10 @@ defmodule VelocyPack.Decoder do
     {length, data} = parse_length(data, 0, 0, true)
     {data, length, rest}
   end
+
+  @spec skip_zeros(binary()) :: binary()
+  defp skip_zeros(<<0, rest::binary>>), do: skip_zeros(rest)
+  defp skip_zeros(data), do: data
 
   @spec parse_length(binary(), integer(), integer(), boolean()) :: {integer(), binary()}
   defp parse_length(data, len, p, reverse) do
