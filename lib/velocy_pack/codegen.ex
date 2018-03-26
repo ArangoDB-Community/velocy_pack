@@ -7,19 +7,33 @@ defmodule VelocyPack.Codegen do
 
   import Bitwise
 
+  defmacro __using__(_opts) do
+    funcs = for i <- 1..4 do
+      name = "build_index_table_#{1 <<< (i - 1)}" |> String.to_atom
+      quote do
+        def unquote(name) ([], acc, _offset), do: IO.iodata_to_binary(acc)
+        def unquote(name) ([h | tail], acc, offset) do
+          acc = [<<(h + offset)::unsigned-little-unit(8)-size(power_of_2(unquote(i - 1)))>> | acc]
+          unquote(name)(tail, acc, offset)
+        end
+      end
+    end
+
+    quote do
+      import VelocyPack.Codegen
+      unquote(funcs)
+    end
+  end
+
+  defmacro index_table(offsets, offset, bytes) do
+    name = "build_index_table_#{bytes}" |> String.to_atom
+    quote do: unquote(name)(unquote(offsets), [], unquote(offset))
+  end
+
   defmacro power_of_2(exp) do
     result = 1 <<< exp
     quote do: unquote(result)
   end
-
-  defmacro index_table(offsets, offset, 1), do:
-    quote do: for i <- unquote(offsets), do: <<(i + unquote(offset))::unsigned-size(8)>>
-  defmacro index_table(offsets, offset, 2), do:
-    quote do: for i <- unquote(offsets), do: <<(i + unquote(offset))::unsigned-little-size(16)>>
-  defmacro index_table(offsets, offset, 4), do:
-    quote do: for i <- unquote(offsets), do: <<(i + unquote(offset))::unsigned-little-size(32)>>
-  defmacro index_table(offsets, offset, 8), do:
-    quote do: for i <- unquote(offsets), do: <<(i + unquote(offset))::unsigned-little-size(64)>>
 
   defmacro bytecase(var, do: clauses) do
     {ranges, default, literals} = clauses_to_ranges(clauses, [])

@@ -156,9 +156,17 @@ defmodule VelocyPack.EncoderTest do
       assert decode!(encoded) == v
     end
 
-    #test "compact array" do
-    #  assert encode!(<<0x13, 0x06, 0x31, 0x28, 0x10, 0x02>>) == [1, 16]
-    #end
+    test "compact array" do
+      assert encode!([1, 16], compact_arrays: true) == <<0x13, 0x06, 0x31, 0x28, 0x10, 0x02>>
+
+      # This test covers the corner case were, due to the number of bytes required for the size
+      # information itself, an additional byte is needed to encode the final total size.
+      s = "Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor. "
+        <> "Aenean massa. Cum sociis ..."
+      v = [s, 1, 2, 42]
+      <<0x13, _::binary>> = encoded = encode!(v, compact_arrays: true)
+      assert decode!(encoded) == v
+    end
 
     test "nested list" do
       expected = <<0x02, 0x0c, 0x02, 0x05, 0x31, 0x32, 0x33, 0x02, 0x05, 0x31, 0x32, 0x33>>
@@ -274,6 +282,12 @@ defmodule VelocyPack.EncoderTest do
         0x00, 0x5a, 0x00, 0xaf, 0x00, 0x04, 0x01, 0x59, 0x01, 0xae, 0x01, 0x03, 0x02, 0x58, 0x02, 0xad, 0x02,
         0x02, 0x03>>
       assert encode!(data) == expected
+    end
+
+    test "compact object" do
+      data = %{"a" => 12, "b" => true, "c" => "xyz"}
+      expected = <<0x14, 0x10, 0x41, 0x61, 0x28, 0x0c, 0x41, 0x62, 0x1a, 0x41, 0x63, 0x43, 0x78, 0x79, 0x7a, 0x03>>
+      assert encode!(data, compact_objects: true) == expected
     end
   end
 end
