@@ -1,24 +1,32 @@
 # VelocyPack
 
-Parser and Generator for [VelocyPack](https://github.com/arangodb/velocypack)
+An Elixir parser and generator for [VelocyPack](https://github.com/arangodb/velocypack/blob/master/VelocyPack.md) v1.
 
 The implementation is heavily inspired by [Jason](https://github.com/michalmuskala/jason) and
 borrows some code (specifically the Codegen module).
 
-## Installation
-
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `velocy_pack` to your list of dependencies in `mix.exs`:
+## Examples
 
 ```elixir
-def deps do
-  [
-    {:velocy_pack, "~> 0.1.0"}
-  ]
-end
+iex> {:ok, vpack} = VelocyPack.encode(10.2312514)
+{:ok, <<27, 245, 78, 96, 149, 102, 118, 36, 64>>}
+iex> VelocyPack.decode(vpack)
+{:ok, 10.2312514}
+
+iex> vpack = VelocyPack.encode!(%{a: "a", b: %{bool: true, float: 10.2312514}})
+<<11, 37, 2, 65, 97, 65, 97, 65, 98, 11, 26, 2, 68, 98, 111, 111, 108, 26, 69, 102, 108, 111, 97, 116, 27, 245, 78, 96, 149, 102, 118, 36, 64, 3, 9, 3, 7>>
+iex> VelocyPack.decode!(vpack)
+%{"a" => "a", "b" => %{"bool" => true, "float" => 10.2312514}}
+
+iex> VelocyPack.decode(<<11>>)
+{:error, %VelocyPack.Error{message: "unexpected sequence", dump: nil}}
+
+iex> VelocyPack.decode!(<<11>>)
+** (VelocyPack.Error) unexpected sequence
+
+iex> VelocyPack.decode(<<11, 823891328731>>)
+{:error, %VelocyPack.Error{message: "unexpected byte", dump: "<<0xDB>>"}}
+
+iex> VelocyPack.decode!(<<11, 823891328731>>)
+** (VelocyPack.Error) unexpected byte: <<0xDB>>
 ```
-
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/velocy_pack](https://hexdocs.pm/velocy_pack).
-

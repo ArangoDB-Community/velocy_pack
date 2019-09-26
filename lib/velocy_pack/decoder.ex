@@ -4,57 +4,105 @@ defmodule VelocyPack.Decoder do
   # The implementation of this decoder is heavily inspired by that of Jason (https://github.com/michalmuskala/jason)
 
   use Bitwise
-  alias VelocyPack.Codegen
+  alias VelocyPack.{Codegen, Error}
   import Codegen, only: [bytecase: 2]
 
   @spec parse(binary(), keyword()) :: {:ok, any()} | {:error, any()}
   def parse(data, _opts \\ []) when is_binary(data) do
     try do
-      {value, <<>>} = value(data)
-      {:ok, value}
+      case value(data) do
+        {value, <<>>} ->
+          {:ok, value}
+
+        {value, tail} ->
+          {:ok, {value, tail}}
+      end
+    rescue
+      e in MatchError ->
+        {:error, Error.exception(e)}
+
+      e in CaseClauseError ->
+        {:error, Error.exception(e)}
     catch
-      err ->
-        {:error, err}
+      error ->
+        {:error, error}
     end
   end
 
   @spec value(binary()) :: {any(), binary()}
   defp value(data) do
     bytecase data do
-      _ in 0x01, rest -> {[], rest}
+      _ in 0x01, rest ->
+        {[], rest}
 
-      type in 0x02..0x05, rest -> parse_array_without_index_table(type, rest)
-      type in 0x06..0x09, rest -> parse_array_with_index_table(type, rest)
+      type in 0x02..0x05, rest ->
+        parse_array_without_index_table(type, rest)
 
-      _ in 0x0a, rest -> {%{}, rest}
-      type in 0x0b..0x0e, rest -> parse_object(type, rest)
+      type in 0x06..0x09, rest ->
+        parse_array_with_index_table(type, rest)
+
+      _ in 0x0A, rest ->
+        {%{}, rest}
+
+      type in 0x0B..0x0E, rest ->
+        parse_object(type, rest)
 
       # TODO: 0x0f..0x12 - objects with unsorted index table
-      _ in 0x13, rest -> parse_compact_array(rest)
-      _ in 0x14, rest -> parse_compact_object(rest)
+      _ in 0x13, rest ->
+        parse_compact_array(rest)
+
+      _ in 0x14, rest ->
+        parse_compact_object(rest)
 
       # 0x15..0x16 - reserved
-      _ in 0x17, rest -> {:illegal, rest}
-      _ in 0x18, rest -> {nil, rest}
-      _ in 0x19, rest -> {false, rest}
-      _ in 0x1a, rest -> {true, rest}
-      _ in 0x1b, rest -> parse_double(rest)
-      _ in 0x1c, rest -> parse_date_time(rest)
+      _ in 0x17, rest ->
+        {:illegal, rest}
+
+      _ in 0x18, rest ->
+        {nil, rest}
+
+      _ in 0x19, rest ->
+        {false, rest}
+
+      _ in 0x1A, rest ->
+        {true, rest}
+
+      _ in 0x1B, rest ->
+        parse_double(rest)
+
+      _ in 0x1C, rest ->
+        parse_date_time(rest)
 
       # 0x1d - external -> not supported
-      _ in 0x1e, rest -> {:min_key, rest}
-      _ in 0x1f, rest -> {:max_key, rest}
+      _ in 0x1E, rest ->
+        {:min_key, rest}
 
-      type in 0x20..0x27, rest -> parse_int(type, rest)
-      type in 0x28..0x2f, rest -> parse_uint(type, rest)
-      type in 0x30..0x39, rest -> parse_small_int(type, rest)
-      type in 0x3a..0x3f, rest -> parse_neg_small_int(type, rest)
+      _ in 0x1F, rest ->
+        {:max_key, rest}
 
-      _ in 0x40, rest -> {"", rest}
-      type in 0x41..0xbe, rest -> parse_short_string(type, rest)
-      _ in 0xbf, rest -> parse_string(rest)
+      type in 0x20..0x27, rest ->
+        parse_int(type, rest)
 
-      type in 0xc0..0xc7, rest -> parse_binary(type, rest)
+      type in 0x28..0x2F, rest ->
+        parse_uint(type, rest)
+
+      type in 0x30..0x39, rest ->
+        parse_small_int(type, rest)
+
+      type in 0x3A..0x3F, rest ->
+        parse_neg_small_int(type, rest)
+
+      _ in 0x40, rest ->
+        {"", rest}
+
+      type in 0x41..0xBE, rest ->
+        parse_short_string(type, rest)
+
+      _ in 0xBF, rest ->
+        parse_string(rest)
+
+      type in 0xC0..0xC7, rest ->
+        parse_binary(type, rest)
 
       # 0xc8..0xcf - BCD -> not supported
       # 0xd0..0xd7 - negative BCD -> not supported
@@ -63,32 +111,60 @@ defmodule VelocyPack.Decoder do
 
       type, _rest ->
         error({:unsupported_type, type})
+
       <<>> ->
         error(:unexpected_end)
     end
   end
 
-  defp error(err), do: throw err
+  defp error(err), do: throw(err)
 
   @spec value_size(binary()) :: integer() | no_return()
   defp value_size(data) do
     bytecase data do
-      _ in 0x01, _ -> 1
-      type in 0x02..0x09, rest -> get_array_size(type, rest)
-      _ in 0x0a, _ -> 1
-      type in 0x0b..0x0e, rest -> get_object_size(type, rest)
-      _ in 0x13..0x14, rest -> get_compact_size(rest)
+      _ in 0x01, _ ->
+        1
+
+      type in 0x02..0x09, rest ->
+        get_array_size(type, rest)
+
+      _ in 0x0A, _ ->
+        1
+
+      type in 0x0B..0x0E, rest ->
+        get_object_size(type, rest)
+
+      _ in 0x13..0x14, rest ->
+        get_compact_size(rest)
+
       # 0x15..0x16 - reserved
-      _ in 0x17..0x1a, _ -> 1
-      _ in 0x1b..0x1c, _ -> 9
+      _ in 0x17..0x1A, _ ->
+        1
+
+      _ in 0x1B..0x1C, _ ->
+        9
+
       # 0x1d - external -> not supported
-      _ in 0x1e..0x1f, _ -> 1
-      type in 0x20..0x27, _ -> type - 0x1f + 1
-      type in 0x28..0x2f, _ -> type - 0x27 + 1
-      _ in 0x30..0x3f, _ -> 1
-      type in 0x40..0xbe, _ -> type - 0x40
-      _ in 0xbf, rest -> get_string_size(rest)
-      type in 0xc0..0xc7, rest -> get_binary_size(type, rest)
+      _ in 0x1E..0x1F, _ ->
+        1
+
+      type in 0x20..0x27, _ ->
+        type - 0x1F + 1
+
+      type in 0x28..0x2F, _ ->
+        type - 0x27 + 1
+
+      _ in 0x30..0x3F, _ ->
+        1
+
+      type in 0x40..0xBE, _ ->
+        type - 0x40
+
+      _ in 0xBF, rest ->
+        get_string_size(rest)
+
+      type in 0xC0..0xC7, rest ->
+        get_binary_size(type, rest)
 
       # 0xc8..0xcf - BCD -> not supported
       # 0xd0..0xd7 - negative BCD -> not supported
@@ -97,6 +173,7 @@ defmodule VelocyPack.Decoder do
 
       type, _rest ->
         error({:unsupported_type, type})
+
       <<>> ->
         error(:unexpected_end)
     end
@@ -110,12 +187,12 @@ defmodule VelocyPack.Decoder do
   @compile {:inline, parse_date_time: 1}
   @spec parse_date_time(binary()) :: {any(), binary()}
   defp parse_date_time(<<value::integer-unsigned-little-size(64), rest::binary>>),
-    do: {DateTime.from_unix!(value, :milliseconds), rest}
+    do: {DateTime.from_unix!(value, :millisecond), rest}
 
   @compile {:inline, parse_int: 2}
   @spec parse_int(integer(), binary()) :: {any(), binary()}
   defp parse_int(type, data) do
-    size = type - 0x1f
+    size = type - 0x1F
     <<value::integer-signed-little-unit(8)-size(size), rest::binary>> = data
     {value, rest}
   end
@@ -151,27 +228,31 @@ defmodule VelocyPack.Decoder do
     {value, rest}
   end
 
-  @spec parse_string( binary()) :: {any(), binary()}
-  defp parse_string(<<length::integer-unsigned-little-size(64), value::binary-size(length), rest::binary>>) do
+  @spec parse_string(binary()) :: {any(), binary()}
+  defp parse_string(
+         <<length::integer-unsigned-little-size(64), value::binary-size(length), rest::binary>>
+       ) do
     {value, rest}
   end
 
   @compile {:inline, parse_binary: 2}
   @spec parse_binary(integer(), binary()) :: {any(), binary()}
   defp parse_binary(type, data) do
-    size = type - 0xbf
+    size = type - 0xBF
     parse_binary_content(size, data)
   end
 
   @spec parse_binary_content(integer(), binary()) :: {any(), binary()}
   defp parse_binary_content(size, data) do
-    <<length::integer-unsigned-little-unit(8)-size(size), value::binary-size(length), rest::binary>> = data
+    <<length::integer-unsigned-little-unit(8)-size(size), value::binary-size(length),
+      rest::binary>> = data
+
     {value, rest}
   end
 
   @spec get_array_size(integer(), binary()) :: integer()
   defp get_array_size(type, data) do
-    offset = if (type < 0x06), do: 0x02, else: 0x06
+    offset = if type < 0x06, do: 0x02, else: 0x06
     size_bytes = 1 <<< (type - offset)
     <<size::integer-unsigned-little-unit(8)-size(size_bytes), _rest::binary>> = data
     size
@@ -179,7 +260,7 @@ defmodule VelocyPack.Decoder do
 
   @spec get_object_size(integer(), binary()) :: integer()
   defp get_object_size(type, data) do
-    offset = if (type < 0x0e), do: 0x0b, else: 0x0e
+    offset = if type < 0x0E, do: 0x0B, else: 0x0E
     size_bytes = 1 <<< (type - offset)
     <<size::integer-unsigned-little-unit(8)-size(size_bytes), _rest::binary>> = data
     size
@@ -187,7 +268,7 @@ defmodule VelocyPack.Decoder do
 
   @spec get_binary_size(integer(), binary()) :: integer()
   defp get_binary_size(type, data) do
-    size = type - 0xbf
+    size = type - 0xBF
     <<length::integer-unsigned-little-unit(8)-size(size), _rest::binary>> = data
     length
   end
@@ -199,7 +280,8 @@ defmodule VelocyPack.Decoder do
   end
 
   @spec get_string_size(binary()) :: integer()
-  defp get_string_size(<<length::integer-unsigned-little-size(64), _::binary>>), do: length + 8 + 1
+  defp get_string_size(<<length::integer-unsigned-little-size(64), _::binary>>),
+    do: length + 8 + 1
 
   @spec parse_array_without_index_table(integer(), binary()) :: {list(), binary()}
   defp parse_array_without_index_table(type, data) do
@@ -209,12 +291,13 @@ defmodule VelocyPack.Decoder do
     rest = skip_zeros(rest)
     zeros = data_size - byte_size(rest)
     elem_size = value_size(rest)
-    length = div((total_size - size_bytes - 1)- zeros, elem_size)
+    length = div(total_size - size_bytes - 1 - zeros, elem_size)
     parse_fixed_size_array_elements(length, elem_size, rest)
   end
 
   @spec parse_fixed_size_array_elements(integer(), integer(), binary()) :: {list(), binary()}
   defp parse_fixed_size_array_elements(0, _, data), do: {[], data}
+
   defp parse_fixed_size_array_elements(length, elem_size, data) do
     <<elem::binary-unit(8)-size(elem_size), rest::binary>> = data
     {elem, <<>>} = value(elem)
@@ -223,27 +306,38 @@ defmodule VelocyPack.Decoder do
   end
 
   @spec parse_array_with_index_table(integer(), binary()) :: {list(), binary()}
-  defp parse_array_with_index_table(0x09, <<total_size::integer-unsigned-little-size(64), rest::binary>>) do
-    data_size = total_size - 1 - 8 - 8;
-    <<data::binary-size(data_size), length::integer-unsigned-little-size(64), rest::binary>> = rest
-    { parse_array_with_index_table_elements(length, 8, data), rest}
+  defp parse_array_with_index_table(
+         0x09,
+         <<total_size::integer-unsigned-little-size(64), rest::binary>>
+       ) do
+    data_size = total_size - 1 - 8 - 8
+
+    <<data::binary-size(data_size), length::integer-unsigned-little-size(64), rest::binary>> =
+      rest
+
+    {parse_array_with_index_table_elements(length, 8, data), rest}
   end
+
   defp parse_array_with_index_table(type, data) do
     size_bytes = 1 <<< (type - 0x06)
+
     <<total_size::integer-unsigned-little-unit(8)-size(size_bytes),
-      length::integer-unsigned-little-unit(8)-size(size_bytes),
-      rest::binary>> = data
+      length::integer-unsigned-little-unit(8)-size(size_bytes), rest::binary>> = data
+
     data_size = total_size - 1 - 2 * size_bytes
     <<data::binary-size(data_size), rest::binary>> = rest
     data = skip_zeros(data)
     list = parse_array_with_index_table_elements(length, size_bytes, data)
-    { list, rest }
+    {list, rest}
   end
 
   @spec parse_array_with_index_table_elements(integer(), integer(), binary()) :: list()
   defp parse_array_with_index_table_elements(length, size_bytes, data) do
-    index_table_size = if (length == 1), do: 0, else: length * size_bytes
-    {list, <<_index_table::binary-size(index_table_size)>>} = parse_variable_size_array_elements(length, data)
+    index_table_size = if length == 1, do: 0, else: length * size_bytes
+
+    {list, <<_index_table::binary-size(index_table_size)>>} =
+      parse_variable_size_array_elements(length, data)
+
     list
   end
 
@@ -259,6 +353,7 @@ defmodule VelocyPack.Decoder do
   # that this is ~10% faster than a tail-recursive version.
   @spec parse_variable_size_array_elements(integer(), binary()) :: {list(), binary()}
   defp parse_variable_size_array_elements(0, data), do: {[], data}
+
   defp parse_variable_size_array_elements(length, data) do
     {elem, rest} = value(data)
     {list, rest} = parse_variable_size_array_elements(length - 1, rest)
@@ -267,15 +362,22 @@ defmodule VelocyPack.Decoder do
 
   @spec parse_object(integer(), binary()) :: {map(), binary()}
   defp parse_object(type, data) do
-    size_bytes = 1 <<< (type - 0x0b)
+    size_bytes = 1 <<< (type - 0x0B)
+
     <<total_size::integer-unsigned-little-unit(8)-size(size_bytes),
-      length::integer-unsigned-little-unit(8)-size(size_bytes),
-      rest::binary>> = data
+      length::integer-unsigned-little-unit(8)-size(size_bytes), rest::binary>> = data
+
     data_size = total_size - 1 - 2 * size_bytes
     <<data::binary-size(data_size), rest::binary>> = rest
-    index_table_size = if (length == 1), do: 0, else: length * size_bytes
-    {obj, <<_index_table::binary-size(index_table_size)>>} = parse_object_members(length, %{}, skip_zeros(data))
-    {obj, rest}
+    index_table_size = if length == 1, do: 0, else: length * size_bytes
+
+    case parse_object_members(length, %{}, skip_zeros(data)) do
+      {obj, <<_index_table::binary-size(index_table_size)>>} ->
+        {obj, rest}
+
+      {obj, <<3>>} ->
+        {obj, rest}
+    end
   end
 
   @spec parse_compact_object(binary()) :: {map(), binary()}
@@ -287,6 +389,7 @@ defmodule VelocyPack.Decoder do
 
   @spec parse_object_members(integer(), map(), binary()) :: {map(), binary()}
   defp parse_object_members(0, obj, data), do: {obj, data}
+
   defp parse_object_members(length, obj, data) do
     {key, rest} = value(data)
     {value, rest} = value(rest)
@@ -318,9 +421,11 @@ defmodule VelocyPack.Decoder do
         <<v, rest::binary>> = data
         {v, rest}
       end
-    len = len + ((v &&& 0x7f) <<< p)
+
+    len = len + ((v &&& 0x7F) <<< p)
     p = p + 7
-    if ((v &&& 0x80) != 0) do
+
+    if (v &&& 0x80) != 0 do
       parse_length(rest, len, p, reverse)
     else
       {len, rest}
