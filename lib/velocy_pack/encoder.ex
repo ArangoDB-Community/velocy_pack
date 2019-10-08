@@ -1,6 +1,6 @@
 defprotocol VelocyPack.Encoder do
   @moduledoc """
-  Protocol controlling how a value is encoded to VelocyPack.
+  Protocol controlling how a value is encoded to _VelocyPack_.
   """
 
   def encode(value, opts)

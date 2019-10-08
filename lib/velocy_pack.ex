@@ -1,55 +1,63 @@
 defmodule VelocyPack do
-  @moduledoc """
-  An Elixir parser and generator for [VelocyPack](https://github.com/arangodb/velocypack).
-  """
+  @moduledoc File.read!("#{__DIR__}/../README.md")
+             |> String.split("\n")
+             |> Enum.drop(2)
+             |> Enum.join("\n")
+
+  @type vpack :: binary | iodata
 
   @doc """
-  Parses the VelocyPack value from `input` iodata.
+  Parses the the first _VelocyPack_ value from a binary or iodata.
 
   The options parameter is reserved for future use and not used at the moment.
   """
-  def decode(input, opts \\ []), do:
-    VelocyPack.Decoder.parse(IO.iodata_to_binary(input), opts)
+  @spec decode(vpack) :: {:ok, term} | {:ok, {term, vpack}} | {:error, any}
+  def decode(vpack, opts \\ []) do
+    __MODULE__.Decoder.parse(IO.iodata_to_binary(vpack), opts)
+  end
 
   @doc """
-  Parses the VelocyPack value from `input` iodata.
+  Parses the the first _VelocyPack_ value from a binary or iodata.
 
-  Similar to `decode/2` except it will unwrap the error tuple and raise
+  Same as `decode/2` except it will unwrap the tuple and raise
   in case of errors.
   """
-  def decode!(input, opts \\ []) do
-    case decode(input, opts) do
+  @spec decode!(vpack) :: term | {term, vpack}
+  def decode!(vpack, opts \\ []) do
+    case decode(vpack, opts) do
       {:ok, value} -> value
-      {:error, err} -> raise err
+      {:error, reason} -> raise reason
     end
   end
 
   @doc """
-  Generates VelocyPack corresponding to `input`.
+  Generates a _VelocyPack_ value as a binary corresponding to `term`.
 
-  The generation is controlled by the `VelocyPack.Encoder` protocol,
+  The generation is controlled by the `Velocy.Encoder` protocol,
   please refer to the module to read more on how to define the protocol
   for custom data types.
 
   The options parameter is reserved for future use and not used at the moment.
   """
-  def encode(input, opts \\ []) do
-    case VelocyPack.Encode.encode(input, opts) do
-      {:ok, result} -> {:ok, IO.iodata_to_binary(result)}
-      {:error, error} -> {:error, error}
+  @spec encode(term) :: {:ok, vpack} | {:error, any}
+  def encode(term, opts \\ []) do
+    case __MODULE__.Encode.encode(term, opts) do
+      {:ok, vpack} -> {:ok, IO.iodata_to_binary(vpack)}
+      {:error, reason} -> {:error, reason}
     end
   end
 
   @doc """
-  Generates VelocyPack corresponding to `input`.
+  Generates a _VelocyPack_ value as a binary corresponding to `term`.
 
-  Similar to `encode/2` except it will unwrap the error tuple and raise
+  Same as `encode/2` except it will unwrap the tuple and raise
   in case of errors.
   """
-  def encode!(input, opts \\ []) do
-    case encode(input, opts) do
-      {:ok, result} -> result
-      {:error, error} -> raise error
+  @spec encode!(term) :: vpack
+  def encode!(term, opts \\ []) do
+    case encode(term, opts) do
+      {:ok, vpack} -> vpack
+      {:error, reason} -> raise reason
     end
   end
 end
