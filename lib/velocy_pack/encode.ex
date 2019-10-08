@@ -79,20 +79,18 @@ defmodule VelocyPack.Encode do
     """
   end
 
-  for i <- 8..1,
-      do:
-        defp(encode_integer(value) when value < -power_of_2(unquote((i - 1) * 8 - 1)),
-          do:
-            {[<<unquote(0x1F + i), value::little-unsigned-size(unquote(i * 8))>>], unquote(i) + 1}
-        )
+  for i <- 8..1 do
+    defp encode_integer(value) when value < -power_of_2(unquote((i - 1) * 8 - 1)) do
+      {[<<unquote(0x1F + i), value::little-unsigned-size(unquote(i * 8))>>], unquote(i) + 1}
+    end
+  end
 
   # positive integers
-  for i <- 1..8,
-      do:
-        defp(encode_integer(value) when value < power_of_2(unquote(i * 8)),
-          do:
-            {[<<unquote(0x27 + i), value::little-unsigned-size(unquote(i * 8))>>], unquote(i) + 1}
-        )
+  for i <- 1..8 do
+    defp encode_integer(value) when value < power_of_2(unquote(i * 8)) do
+      {[<<unquote(0x27 + i), value::little-unsigned-size(unquote(i * 8))>>], unquote(i) + 1}
+    end
+  end
 
   defp encode_integer(_) do
     raise VelocyPack.Error, """
@@ -144,8 +142,8 @@ defmodule VelocyPack.Encode do
     {head, head_size} = value(head, opts)
 
     {iodata, offsets, total_size, count, equal_sizes} =
-      tail
-      |> Enum.reduce(
+      Enum.reduce(
+        tail,
         {[head], [0], head_size, 1, true},
         fn v, {acc, offsets, total_size, count, equal_sizes} ->
           {v, size} = value(v, opts)
@@ -178,11 +176,12 @@ defmodule VelocyPack.Encode do
          when total_size < power_of_2(unquote(i * 8)) do
       total_size = total_size + 1 + power_of_2(unquote(i - 1))
 
-      {[
-         <<unquote(0x01 + i),
-           total_size::integer-unsigned-little-unit(8)-size(power_of_2(unquote(i - 1)))>>
-         | iodata
-       ], total_size}
+      header = <<
+        unquote(0x01 + i),
+        total_size::integer-unsigned-little-unit(8)-size(power_of_2(unquote(i - 1)))
+      >>
+
+      {[header | iodata], total_size}
     end
   end
 
@@ -190,39 +189,27 @@ defmodule VelocyPack.Encode do
     cond do
       count < power_of_2(8) and total_size + count + 3 < power_of_2(8) ->
         total_size = total_size + count + 3
+        header = <<0x06, total_size::unsigned-size(8), count::unsigned-size(8)>>
 
-        {[
-           <<0x06, total_size::unsigned-size(8), count::unsigned-size(8)>>,
-           iodata,
-           index_table(offsets, 3, 1)
-         ], total_size}
+        {[header, iodata, index_table(offsets, 3, 1)], total_size}
 
       count < power_of_2(16) and total_size + count * 2 + 5 < power_of_2(16) ->
         total_size = total_size + count * 2 + 5
+        header = <<0x07, total_size::unsigned-little-size(16), count::unsigned-little-size(16)>>
 
-        {[
-           <<0x07, total_size::unsigned-little-size(16), count::unsigned-little-size(16)>>,
-           iodata,
-           index_table(offsets, 5, 2)
-         ], total_size}
+        {[header, iodata, index_table(offsets, 5, 2)], total_size}
 
       count < power_of_2(32) and total_size + count * 4 + 9 < power_of_2(32) ->
         total_size = total_size + count * 4 + 9
+        header = <<0x08, total_size::unsigned-little-size(32), count::unsigned-little-size(32)>>
 
-        {[
-           <<0x08, total_size::unsigned-little-size(32), count::unsigned-little-size(32)>>,
-           iodata,
-           index_table(offsets, 9, 4)
-         ], total_size}
+        {[header, iodata, index_table(offsets, 9, 4)], total_size}
 
       true ->
         total_size = total_size + count * 8 + 17
+        header = <<0x09, total_size::unsigned-little-size(64), count::unsigned-little-size(64)>>
 
-        {[
-           <<0x09, total_size::unsigned-little-size(64), count::unsigned-little-size(64)>>,
-           iodata,
-           index_table(offsets, 17, 8)
-         ], total_size}
+        {[header, iodata, index_table(offsets, 17, 8)], total_size}
     end
   end
 
@@ -234,8 +221,8 @@ defmodule VelocyPack.Encode do
   # compact object
   defp encode_map(value, {_, true} = opts) do
     {iodata, total_size, count} =
-      value
-      |> Enum.reduce(
+      Enum.reduce(
+        value,
         {[], 0, 0},
         fn {k, v}, {acc, total_size, count} ->
           {key, key_size} = encode_string(as_key(k))
@@ -279,40 +266,28 @@ defmodule VelocyPack.Encode do
     cond do
       count < power_of_2(8) and total_size + count + 3 < power_of_2(8) ->
         total_size = total_size + count + 3
+        header = <<0x0B, total_size::unsigned-size(8), count::unsigned-size(8)>>
 
-        {[
-           <<0x0B, total_size::unsigned-size(8), count::unsigned-size(8)>>,
-           iodata,
-           index_table(offsets, 3, 1)
-         ], total_size}
+        {[header, iodata, index_table(offsets, 3, 1)], total_size}
 
       count < power_of_2(16) and total_size + count * 2 + 5 < power_of_2(16) ->
         total_size = total_size + count * 2 + 5
+        header = <<0x0C, total_size::unsigned-little-size(16), count::unsigned-little-size(16)>>
 
-        {[
-           <<0x0C, total_size::unsigned-little-size(16), count::unsigned-little-size(16)>>,
-           iodata,
-           index_table(offsets, 5, 2)
-         ], total_size}
+        {[header, iodata, index_table(offsets, 5, 2)], total_size}
 
       count < power_of_2(32) and total_size + count * 4 + 9 < power_of_2(32) ->
         total_size = total_size + count * 4 + 9
+        header = <<0x0D, total_size::unsigned-little-size(32), count::unsigned-little-size(32)>>
 
-        {[
-           <<0x0D, total_size::unsigned-little-size(32), count::unsigned-little-size(32)>>,
-           iodata,
-           index_table(offsets, 9, 4)
-         ], total_size}
+        {[header, iodata, index_table(offsets, 9, 4)], total_size}
 
       true ->
         total_size = total_size + count * 8 + 17
+        header = <<0x0E, total_size::unsigned-little-size(64)>>
 
-        {[
-           <<0x0E, total_size::unsigned-little-size(64)>>,
-           iodata,
-           index_table(offsets, 9, 8),
-           <<count::unsigned-little-size(64)>>
-         ], total_size}
+        {[header, iodata, index_table(offsets, 9, 8), <<count::unsigned-little-size(64)>>],
+         total_size}
     end
   end
 

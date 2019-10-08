@@ -371,7 +371,9 @@ defmodule VelocyPack.Decoder do
     <<data::binary-size(data_size), rest::binary>> = rest
     index_table_size = length * size_bytes
 
-    {obj, <<_index_table::binary-size(index_table_size)>>} = parse_object_members(length, %{}, skip_zeros(data))
+    {obj, <<_index_table::binary-size(index_table_size)>>} =
+      parse_object_members(length, %{}, skip_zeros(data))
+
     {obj, rest}
   end
 
