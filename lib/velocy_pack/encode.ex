@@ -276,12 +276,6 @@ defmodule VelocyPack.Encode do
 
   defp encode_map_with_index_table(iodata, count, offsets, total_size) do
     cond do
-      count == 1 and total_size + 3 < power_of_2(8) ->
-        total_size = total_size + count + 3
-
-        {[<<0x0B, total_size::unsigned-size(8), 1::unsigned-size(8)>> | iodata] ++ [3],
-         total_size}
-
       count < power_of_2(8) and total_size + count + 3 < power_of_2(8) ->
         total_size = total_size + count + 3
 

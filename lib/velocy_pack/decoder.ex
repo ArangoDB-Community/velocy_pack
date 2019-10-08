@@ -369,15 +369,10 @@ defmodule VelocyPack.Decoder do
 
     data_size = total_size - 1 - 2 * size_bytes
     <<data::binary-size(data_size), rest::binary>> = rest
-    index_table_size = if length == 1, do: 0, else: length * size_bytes
+    index_table_size = length * size_bytes
 
-    case parse_object_members(length, %{}, skip_zeros(data)) do
-      {obj, <<_index_table::binary-size(index_table_size)>>} ->
-        {obj, rest}
-
-      {obj, <<3>>} ->
-        {obj, rest}
-    end
+    {obj, <<_index_table::binary-size(index_table_size)>>} = parse_object_members(length, %{}, skip_zeros(data))
+    {obj, rest}
   end
 
   @spec parse_compact_object(binary()) :: {map(), binary()}

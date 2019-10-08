@@ -231,7 +231,7 @@ defmodule VelocyPack.DecoderTest do
 
     test "object with single string entry" do
       expected = %{"a" => "b"}
-      assert decode!(<<0x0B, 0x07, 0x01, 0x41, 0x61, 0x41, 0x62>>) == expected
+      assert decode!(<<0x0B, 0x08, 0x01, 0x41, 0x61, 0x41, 0x62, 0x03>>) == expected
     end
 
     test "compact object" do
@@ -275,9 +275,9 @@ defmodule VelocyPack.DecoderTest do
         0x6B,
         0x65,
         0x79,
-        0x21,
+        0x28,
         0x2A,
-        0x00,
+        0x03,
         # string "fooooobar"
         0x49,
         0x66,
