@@ -73,8 +73,11 @@ defmodule VelocyPack.Encode do
   defp encode_integer(value) when value in -6..-1, do: {[<<0x40 + value>>], 1}
 
   # negative integers
-  defp encode_integer(value) when value < -power_of_2(63),
-    do: raise("Cannot encode integers less than #{-power_of_2(63)}.")
+  defp encode_integer(value) when value < -power_of_2(63) do
+    raise VelocyPack.Error, """
+    Cannot encode integers less than #{-power_of_2(63)}.\
+    """
+  end
 
   for i <- 8..1,
       do:
@@ -92,7 +95,9 @@ defmodule VelocyPack.Encode do
         )
 
   defp encode_integer(_) do
-    raise "Cannot encode integers greater than #{power_of_2(64) - 1}."
+    raise VelocyPack.Error, """
+    Cannot encode integers greater than #{power_of_2(64) - 1}.\
+    """
   end
 
   # Float
@@ -122,14 +127,10 @@ defmodule VelocyPack.Encode do
   # compact array
   defp encode_list(value, {true, _} = opts) do
     {iodata, total_size, count} =
-      value
-      |> Enum.reduce(
-        {[], 0, 0},
-        fn v, {acc, total_size, count} ->
-          {v, size} = value(v, opts)
-          {[v | acc], total_size + size, count + 1}
-        end
-      )
+      Enum.reduce(value, {[], 0, 0}, fn v, {acc, total_size, count} ->
+        {v, size} = value(v, opts)
+        {[v | acc], total_size + size, count + 1}
+      end)
 
     iodata = :lists.reverse(iodata)
 
