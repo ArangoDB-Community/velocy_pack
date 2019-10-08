@@ -318,8 +318,11 @@ defmodule VelocyPack.Encode do
   defp as_key(value) when is_atom(value), do: Atom.to_string(value)
   defp as_key(value) when is_binary(value), do: value
 
-  defp as_key(value),
-    do: raise("Invalid key '#{inspect(value)}' - keys have to be atoms or strings.")
+  defp as_key(value) do
+    raise VelocyPack.Error, """
+    Invalid key '#{inspect(value)}' - keys have to be atoms or strings.\
+    """
+  end
 
   use Bitwise
 

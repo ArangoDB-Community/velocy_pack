@@ -2,20 +2,22 @@ defmodule VelocyPack.Error do
   defexception [:dump, message: "velocy_pack error"]
 
   def exception(%MatchError{term: ""}) do
-    %VelocyPack.Error{message: "unexpected sequence", dump: nil}
+    %__MODULE__{message: "unexpected sequence", dump: nil}
   end
 
   def exception(%CaseClauseError{term: ""}) do
-    %VelocyPack.Error{message: "unexpected sequence", dump: nil}
+    %__MODULE__{message: "unexpected sequence", dump: nil}
   end
 
   def exception(%MatchError{term: bytes}) do
-    %VelocyPack.Error{message: "unexpected byte", dump: dump(bytes)}
+    %__MODULE__{message: "unexpected byte", dump: dump(bytes)}
   end
 
   def exception(%CaseClauseError{term: bytes}) do
-    %VelocyPack.Error{message: "unexpected byte", dump: dump(bytes)}
+    %__MODULE__{message: "unexpected byte", dump: dump(bytes)}
   end
+
+  def exception(message), do: %__MODULE__{message: message}
 
   def message(%__MODULE__{message: message, dump: nil}), do: message
 
