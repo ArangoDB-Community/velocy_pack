@@ -1,7 +1,7 @@
 defmodule VelocyPack.MixProject do
   use Mix.Project
 
-  @version "0.1.4"
+  @version "0.1.5"
   @description """
   An Elixir parser and generator for VelocyPack v1.
   """
