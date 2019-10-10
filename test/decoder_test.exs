@@ -189,7 +189,7 @@ defmodule VelocyPack.DecoderTest do
     end
 
     test "array with index table with single element" do
-      assert decode!(<<0x06, 0x04, 0x01, 0x31>>) == [1]
+      assert decode!(<<0x06, 0x05, 0x01, 0x31, 0x03>>) == [1]
     end
 
     test "array without index table" do
