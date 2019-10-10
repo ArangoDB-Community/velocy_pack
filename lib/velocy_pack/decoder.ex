@@ -199,16 +199,9 @@ defmodule VelocyPack.Decoder do
     zeros = data_size - byte_size(rest)
     data_size = total_size - size_bytes - 1 - zeros
     <<data::binary-size(data_size), rest::binary>> = rest
-    elems = parse_fixed_size_array_elements(data)
-    {elems, rest}
-  end
-
-  @spec parse_fixed_size_array_elements(binary()) :: list()
-  defp parse_fixed_size_array_elements(<<>>), do: []
-
-  defp parse_fixed_size_array_elements(data) do
-    {elem, rest} = value(data)
-    [elem | parse_fixed_size_array_elements(rest)]
+    list = parse_array_elements(data)
+    # TODO - optionally validate length of list
+    {list, rest}
   end
 
   @spec parse_array_with_index_table(integer(), binary()) :: {list(), binary()}
@@ -221,7 +214,13 @@ defmodule VelocyPack.Decoder do
     <<data::binary-size(data_size), length::integer-unsigned-little-size(64), rest::binary>> =
       rest
 
-    {parse_array_with_index_table_elements(length, 8, data), rest}
+    index_size = length * 8
+    data_size = data_size - index_size
+    <<data::binary-size(data_size), _index::binary-size(index_size)>> = data
+
+    list = parse_array_elements(data)
+    # TODO - optionally validate length of list
+    {list, rest}
   end
 
   defp parse_array_with_index_table(type, data) do
@@ -230,40 +229,37 @@ defmodule VelocyPack.Decoder do
     <<total_size::integer-unsigned-little-unit(8)-size(size_bytes),
       length::integer-unsigned-little-unit(8)-size(size_bytes), rest::binary>> = data
 
-    data_size = total_size - 1 - 2 * size_bytes
-    <<data::binary-size(data_size), rest::binary>> = rest
-    data = skip_zeros(data)
-    list = parse_array_with_index_table_elements(length, size_bytes, data)
+    index_size = size_bytes * length
+    data_size = byte_size(rest)
+    rest = skip_zeros(rest)
+    zeros = data_size - byte_size(rest)
+
+    data_size = total_size - 1 - 2 * size_bytes - zeros - index_size
+    <<data::binary-size(data_size), _index::binary-size(index_size), rest::binary>> = rest
+    list = parse_array_elements(data)
+    # TODO - optionally validate length of list
     {list, rest}
-  end
-
-  @spec parse_array_with_index_table_elements(integer(), integer(), binary()) :: list()
-  defp parse_array_with_index_table_elements(length, size_bytes, data) do
-    index_table_size = if length == 1, do: 0, else: length * size_bytes
-
-    {list, <<_index_table::binary-size(index_table_size)>>} =
-      parse_variable_size_array_elements(length, data)
-
-    list
   end
 
   @spec parse_compact_array(binary()) :: {list(), binary()}
   defp parse_compact_array(data) do
-    {data, length, rest} = parse_compact_header(data)
-    {list, <<>>} = parse_variable_size_array_elements(length, data)
+    {data, _length, rest} = parse_compact_header(data)
+    list = parse_array_elements(data)
+    # TODO - optionally validate length of list
     {list, rest}
   end
+
 
   # Yes, we totaly do this in a non-tail-recursive way.
   # Performance tests for large arrays (~10000 entries) showed
   # that this is ~10% faster than a tail-recursive version.
-  @spec parse_variable_size_array_elements(integer(), binary()) :: {list(), binary()}
-  defp parse_variable_size_array_elements(0, data), do: {[], data}
+  # TODO - rerun performance tests
+  @spec parse_array_elements(binary()) :: list()
+  defp parse_array_elements(<<>>), do: []
 
-  defp parse_variable_size_array_elements(length, data) do
+  defp parse_array_elements(data) do
     {elem, rest} = value(data)
-    {list, rest} = parse_variable_size_array_elements(length - 1, rest)
-    {[elem | list], rest}
+    [elem | parse_array_elements(rest)]
   end
 
   @spec parse_object(integer(), binary()) :: {map(), binary()}
