@@ -173,6 +173,28 @@ defmodule VelocyPack.EncoderTest do
       assert decode!(encoded) == v
     end
 
+    test "list with single element of size 254" do
+      # this tests the edge case where we cannot use a list where the total size is stored
+      # as a single byte because the total size is actually datasize + 2
+      list = [
+        %{
+          "nodeId" => "00000000-0000-0000-0000-000000000000",
+          "nodeType" => "C",
+          "operationType" => "V",
+          "value" => %{
+            "createdAt" => 1234567890123,
+            "createdBy" => "00000000-0000-0000-0000-000000000000",
+            "hidden" => true,
+            "name" => "XXX",
+            "state" => "XXXXXXXX",
+            "updatedAt" => 1234567890123,
+            "updatedBy" => "00000000-0000-0000-0000-000000000000"
+          }
+        }
+      ]
+      assert encode!(list) |> decode!(list) == list
+    end
+
     test "compact array" do
       assert encode!([1, 16], compact_arrays: true) == <<0x13, 0x06, 0x31, 0x28, 0x10, 0x02>>
 

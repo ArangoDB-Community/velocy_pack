@@ -137,7 +137,7 @@ defmodule VelocyPack.Encode do
   end
 
   defp encode_list([head | tail], opts) do
-    # Use a singe pass to calculate the offsets, the total size, the number of elements
+    # Use a single pass to calculate the offsets, the total size, the number of elements
     # and whether all elements have the same size.
     {head, head_size} = value(head, opts)
 
@@ -173,7 +173,7 @@ defmodule VelocyPack.Encode do
 
   for i <- 1..4 do
     defp encode_list_without_index_table(iodata, total_size)
-         when total_size < power_of_2(unquote(i * 8)) do
+         when total_size + 1 + power_of_2(unquote(i - 1)) < power_of_2(unquote(i * 8)) do
       total_size = total_size + 1 + power_of_2(unquote(i - 1))
 
       header = <<
