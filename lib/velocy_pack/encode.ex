@@ -300,7 +300,7 @@ defmodule VelocyPack.Encode do
     """
   end
 
-  use Bitwise
+  import Bitwise
 
   defp encode_compact_data(type, data, total_size, count) do
     encoded_count = compact_integer(count, true)

@@ -3,7 +3,7 @@ defmodule VelocyPack.Decoder do
 
   # The implementation of this decoder is heavily inspired by that of Jason (https://github.com/michalmuskala/jason)
 
-  use Bitwise
+  import Bitwise
   alias VelocyPack.{Codegen, Error}
   import Codegen, only: [bytecase: 2]
 

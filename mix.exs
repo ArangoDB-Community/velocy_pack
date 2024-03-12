@@ -1,7 +1,7 @@
 defmodule VelocyPack.MixProject do
   use Mix.Project
 
-  @version "0.1.6"
+  @version "0.1.7"
   @description """
   An Elixir parser and generator for VelocyPack v1.
   """
@@ -12,7 +12,7 @@ defmodule VelocyPack.MixProject do
     [
       app: :velocy,
       version: @version,
-      elixir: "~> 1.5",
+      elixir: ">= 1.6.0",
       start_permanent: Mix.env() == :prod,
       name: "VelocyPack",
       description: @description,
@@ -47,7 +47,7 @@ defmodule VelocyPack.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:dialyxir, "~> 0.5", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.4", only: :dev, runtime: false},
       {:ex_doc, "> 0.0.0", only: :dev, runtime: false}
     ]
   end
